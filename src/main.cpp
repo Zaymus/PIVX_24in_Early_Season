@@ -1,20 +1,12 @@
 #include "main.h"
+#include "Headers/Motors.hpp"
+#include "Headers/Variables.hpp"
+#include "Headers/Functions.hpp"
+#include "Headers/Autonomous.hpp"
+#include <iostream>
 
-/**
- * A callback function for LLEMU's center button.
- *
- * When this callback is fired, it will toggle line 2 of the LCD text between
- * "I was pressed!" and nothing.
- */
-void on_center_button() {
-	static bool pressed = false;
-	pressed = !pressed;
-	if (pressed) {
-		pros::lcd::set_text(2, "I was pressed!");
-	} else {
-		pros::lcd::clear_line(2);
-	}
-}
+enum trayPositions {stopTray, low, score};
+trayPositions trayPos = low;
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -23,10 +15,10 @@ void on_center_button() {
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
-	pros::lcd::initialize();
-	pros::lcd::set_text(1, "Hello PROS User!");
-
-	pros::lcd::register_btn1_cb(on_center_button);
+    pros::Task updateTask(update);
+	pros::Task printTask(print);
+    pros::Task driveTask(drive);
+    pros::Task intakeTask(intake);
 }
 
 /**
@@ -58,7 +50,14 @@ void competition_initialize() {}
  * will be stopped. Re-enabling the robot will restart the task, not re-start it
  * from where it left off.
  */
-void autonomous() {}
+void autonomous()
+{
+    red15();
+}
+
+// pros::vision_signature_s_t GREEN_CUBE (1, -7419, -5305, -6362, -3343, -1655, -2499, 3.000);
+// pros::vision_signature_s_t ORANGE_CUBE (2, 7349, 9591, 8470, -2817, -2127, -2472, 3.000);
+// pros::vision_signature_s_t PURPLE_CUBE (3, 43, 1365, 704, 8749, 11941, 10345, 3.100);
 
 /**
  * Runs the operator control code. This function will be started in its own task
@@ -73,20 +72,30 @@ void autonomous() {}
  * operator control task will be stopped. Re-enabling the robot will restart the
  * task, not resume it from where it left off.
  */
-void opcontrol() {
-	pros::Controller master(pros::E_CONTROLLER_MASTER);
-	pros::Motor left_mtr(1);
-	pros::Motor right_mtr(2);
 
-	while (true) {
-		pros::lcd::print(0, "%d %d %d", (pros::lcd::read_buttons() & LCD_BTN_LEFT) >> 2,
-		                 (pros::lcd::read_buttons() & LCD_BTN_CENTER) >> 1,
-		                 (pros::lcd::read_buttons() & LCD_BTN_RIGHT) >> 0);
-		int left = master.get_analog(ANALOG_LEFT_Y);
-		int right = master.get_analog(ANALOG_RIGHT_Y);
+void opcontrol()
+{
+	while (true)
+    {
+        power = (master.get_analog(ANALOG_LEFT_Y) * (200.0/127.0));//forward back movement mapped to 200rpm
+        turn = (master.get_analog(ANALOG_LEFT_X) * (200.0/127.0) * 0.5);//left right straffing movement mapped to 200rpm
+        strafe = (master.get_analog(ANALOG_RIGHT_X) * (200.0/127.0));//rotational movement mapped to 200rpm
+        if(abs(turn) < 20) turn = 0;
 
-		left_mtr = left;
-		right_mtr = right;
+        if(master.get_digital(DIGITAL_L1)) intakePow = 200;//intake full power
+        else if(master.get_digital(DIGITAL_L2)) intakePow = -100;//outtake half power
+        else if(master.get_digital(DIGITAL_A)) intakePow = -50;
+        else if(master.get_digital(DIGITAL_LEFT)) intakePow = -200;//outtake full power
+        else intakePow = 0;
+
+        if(master.get_digital(DIGITAL_DOWN)) trayPos = low;//sets custom variable to low position
+        else if (master.get_digital(DIGITAL_UP)) trayPos = score;//sets custom variable to score position
+
+        if(abs(master.get_analog(ANALOG_RIGHT_Y)) > 20)
+        {
+            arm1.move(master.get_analog(ANALOG_RIGHT_Y));
+            arm1.move(master.get_analog(ANALOG_RIGHT_Y));
+        }
 		pros::delay(20);
 	}
 }
