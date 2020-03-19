@@ -4,6 +4,8 @@
 //dead ports: 2, 3, 11
 pros::Motor RFront(17, MOTOR_GEARSET_18, true);
 pros::Motor RBack(18, MOTOR_GEARSET_18, true);
+pros::Motor H1(21, MOTOR_GEARSET_18, false);
+pros::Motor H2(22, MOTOR_GEARSET_18, false);
 pros::Motor LFront(15, MOTOR_GEARSET_18, false);
 pros::Motor LBack(14, MOTOR_GEARSET_18, false);
 

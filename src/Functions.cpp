@@ -18,10 +18,12 @@ int sgn(double num) {return (num < 0 ? -1 : num > 0 ? 1 : 0);}
 
 void moveBase(int power, int strafe, int turn)
 {
-    LFront.move_velocity(power + turn + strafe);
-    LBack.move_velocity(power + turn - strafe);
-    RFront.move_velocity(power - turn - strafe);
-    RBack.move_velocity(power - turn + strafe);
+    LFront.move_velocity(power + turn);
+    LBack.move_velocity(power + turn);
+    H1.move_velocity(strafe);
+    H2.move_velocity(strafe);
+    RFront.move_velocity(power - turn);
+    RBack.move_velocity(power - turn);
 }
 
 //updates all tracking based variables each memory cycle
