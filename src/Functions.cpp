@@ -16,16 +16,6 @@ double inchToTick(double inch){return (inch * (wheelSize*M_PI)) * 360;}
 //passes a real number and returns the sign
 int sgn(double num) {return (num < 0 ? -1 : num > 0 ? 1 : 0);}
 
-void moveBase(int power, int strafe, int turn)
-{
-    LFront.move_velocity(power + turn);
-    LBack.move_velocity(power + turn);
-    H1.move_velocity(strafe);
-    H2.move_velocity(strafe);
-    RFront.move_velocity(power - turn);
-    RBack.move_velocity(power - turn);
-}
-
 //updates all tracking based variables each memory cycle
 void update(void*)
 {
@@ -98,6 +88,7 @@ void print(void*)
     {
         pros::lcd::print(0, "tPot:%d, aPot:%d\n", trayPot.get_value_calibrated(), armPot.get_value_calibrated());
         pros::lcd::print(1, "X:%f, Y:%f, A:%f\n", xcoord, ycoord, radToDeg(global_angle));
+        pros::lcd::print(5, "Y:%Z, X:%Z, A:%Z\n", Y_Settled, X_Settled, A_Settled);
         //print potentiometer values and coordinate location and angle of the bot
         if(target <= pros::millis())
         {
@@ -123,7 +114,7 @@ void print(void*)
             pros::lcd::print(4, "Arm:L:%dA, R:%dA Tilt:L:%dA, R:%dA",
                 arm1.get_current_draw(), arm2.get_current_draw(), tilter1.get_current_draw(), tilter2.get_current_draw());
         }
-        pros::delay(10);
+        pros::delay(5);
     }
 }
 
@@ -131,8 +122,14 @@ void drive(void*)
 {
     while(true)
     {
-        moveBase(power, strafe, turn);//move base motors according to controller input
-        pros::delay(10);
+        LFront.move_voltage(Lpow);
+        LBack.move_voltage(Lpow);
+        LMid.move_voltage(Lpow);
+        RMid.move_voltage(Rpow);
+        RFront.move_voltage(Rpow);
+        RBack.move_voltage(Rpow);
+
+        pros::delay(5);
     }
 }
 
@@ -141,11 +138,50 @@ void intake(void*)
 {
     while(true)
     {
-        RFIntake.move_velocity(intakePow);
-        LFIntake.move_velocity(intakePow);
-        RBIntake.move_velocity(intakePow);
-        LBIntake.move_velocity(intakePow);
+        RFIntake.move_voltage(intakePow);
+        LFIntake.move_voltage(intakePow);
+        RBIntake.move_voltage(intakePow);
+        LBIntake.move_voltage(intakePow);
 
-        pros::delay(10);
+        pros::delay(5);
+    }
+}
+
+void arm(void*)
+{
+    int target, current, pwr, error, totalError, lastError, maxVel = 100, minVel = 20;
+    float kP = 0.0, kI = 0.0, kD = 0.0, P, I, D;
+    while(true)
+    {
+        switch(armPos)
+        {
+            case intakeHeight:
+            target = 10;// motor encoder value at low poisition
+            break;
+
+            case highGoal:
+            target = 1000;// motor encoder value at high position
+            break;
+        }
+
+        current = (arm1.get_position() + arm2.get_position()) / 2;
+
+        error = target - current;
+        totalError += error;
+
+        P = error * kP;
+        I = totalError * kI;
+        abs(I) > 10000 ? I = 0 : I = I;
+        D = (error - lastError) * kD;
+        lastError = error;
+
+        pwr = P + I + D;
+
+        //overrides power if it is too high or too low or if target has been reached
+        fabs(error) >= 10 ? pwr = 0: pwr > maxVel ? pwr = maxVel : pwr < minVel ? pwr = minVel : pwr = pwr;
+
+        arm1.set_brake_mode(MOTOR_BRAKE_HOLD); arm2.set_brake_mode(MOTOR_BRAKE_HOLD);
+
+        pros::delay(5);
     }
 }

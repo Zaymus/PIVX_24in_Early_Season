@@ -2,11 +2,8 @@
 #include "Headers/Motors.hpp"
 #include "Headers/Variables.hpp"
 #include "Headers/Functions.hpp"
-#include "Headers/Autonomous.hpp"
+#include "Headers/Tasks.hpp"
 #include <iostream>
-
-enum trayPositions {stopTray, low, score};
-trayPositions trayPos = low;
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -14,12 +11,7 @@ trayPositions trayPos = low;
  * All other competition modes are blocked by initialize; it is recommended
  * to keep execution time for this mode under a few seconds.
  */
-void initialize() {
-    pros::Task updateTask(update);
-	pros::Task printTask(print);
-    pros::Task driveTask(drive);
-    pros::Task intakeTask(intake);
-}
+void initialize() {}
 
 /**
  * Runs while the robot is in the disabled state of Field Management System or
@@ -52,7 +44,6 @@ void competition_initialize() {}
  */
 void autonomous()
 {
-    red15();
 }
 
 // pros::vision_signature_s_t GREEN_CUBE (1, -7419, -5305, -6362, -3343, -1655, -2499, 3.000);
@@ -75,12 +66,14 @@ void autonomous()
 
 void opcontrol()
 {
+    driveTask.resume();
+    updateTask.remove();
+    //printTask.resume();
+    arm1.tare_position();arm2.tare_position();
 	while (true)
     {
-        power = (master.get_analog(ANALOG_LEFT_Y) * (200.0/127.0));//forward back movement mapped to 200rpm
-        turn = (master.get_analog(ANALOG_RIGHT_X) * (200.0/127.0) * 0.5);//left right straffing movement mapped to 200rpm
-        strafe = (master.get_analog(ANALOG_LEFT_X) * (200.0/127.0));//rotational movement mapped to 200rpm
-        if(abs(strafe) < 20) strafe = 0;
+        Lpow = (master.get_analog(ANALOG_LEFT_Y) * (12000.0/127.0));//forward back movement mapped to 200rpm
+        Rpow = (master.get_analog(ANALOG_RIGHT_X) * (12000.0/127.0));//left right straffing movement mapped to 200rpm
 
         if(master.get_digital(DIGITAL_L1)) intakePow = 200;//intake full power
         else if(master.get_digital(DIGITAL_L2)) intakePow = -100;//outtake half power
@@ -91,11 +84,8 @@ void opcontrol()
         if(master.get_digital(DIGITAL_DOWN)) trayPos = low;//sets custom variable to low position
         else if (master.get_digital(DIGITAL_UP)) trayPos = score;//sets custom variable to score position
 
-        if(abs(master.get_analog(ANALOG_RIGHT_Y)) > 20)
-        {
-            arm1.move(master.get_analog(ANALOG_RIGHT_Y));
-            arm1.move(master.get_analog(ANALOG_RIGHT_Y));
-        }
+        if(master.get_digital(DIGITAL_R1)) armPos = highGoal;//sets custom variable to intake height
+        if(master.get_digital(DIGITAL_R2)) armPos = intakeHeight;//sets custom variable to high goal height
 		pros::delay(20);
 	}
 }

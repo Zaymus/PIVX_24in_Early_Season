@@ -5,8 +5,8 @@
 
 extern pros::Motor RFront;
 extern pros::Motor RBack;
-extern pros::Motor H1;
-extern pros::Motor H2;
+extern pros::Motor RMid;
+extern pros::Motor LMid;
 extern pros::Motor LFront;
 extern pros::Motor LBack;
 
